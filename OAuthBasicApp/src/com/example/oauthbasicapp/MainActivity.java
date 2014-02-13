@@ -20,7 +20,7 @@ import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.TextView;
 
-import com.example.oauthbasicapp.mWebClient.WebClientCallBack;
+import com.example.oauthbasicapp.mGoogleWebClient.WebClientCallBack;
 import com.facebook.android.DialogError;
 import com.facebook.android.Facebook;
 import com.facebook.android.Facebook.DialogListener;
@@ -37,32 +37,24 @@ public class MainActivity extends Activity implements OnClickListener {
 			+ APP_ID + "&redirect_uri=" + Redirect_Uri
 			+ "&type=user_agent&scope=email,read_stream,offline_access";
 
-	private String mFacebookAccessToken;
+	String mFacebookAccessToken;
 	@SuppressWarnings("deprecation")
 	Facebook mFacebook = new Facebook(APP_ID);
-	private boolean flag = false;
 
 	/* google Utils */
 	String CLIENT_ID = "31860159396-r2lqrrabsjub8ilgfifvj2a3fqqhph1a.apps.googleusercontent.com";
-
 	String API_KEY = "AIzaSyDJyn2oOrIwClrCD4kWp15NtzBC9FKw0rE";
-
 	String CLIENT_SECRET = "";
-
 	String SCOPE = "https://www.googleapis.com/auth/tasks";
-
 	String ENDPOINT_URL = "https://www.googleapis.com/tasks/v1/users/@me/lists";
-
 	String REDIRECT_URI = "http://localhost";
 
 	TextView tv;
-
 	WebView webview1;
-
 	Button btn1, btn2;
-
-	private String UserInform_Google = null;
-	private String UserInform_Facebook = null;
+	boolean flag = false;
+	String UserInform_Google = null;
+	String UserInform_Facebook = null;
 
 	@SuppressLint("SetJavaScriptEnabled")
 	@SuppressWarnings("deprecation")
@@ -89,7 +81,9 @@ public class MainActivity extends Activity implements OnClickListener {
 		settings1.setJavaScriptCanOpenWindowsAutomatically(false);
 		settings1.setRenderPriority(WebSettings.RenderPriority.HIGH);
 
-		webview1.setWebViewClient(new mWebClient(mCallBack, CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, ENDPOINT_URL, UserInform_Google, webview1, tv));
+		webview1.setWebViewClient(new mGoogleWebClient(mFacebookCallBack,
+				CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, ENDPOINT_URL,
+				UserInform_Google, webview1, tv));
 	}
 
 	@Override
@@ -114,11 +108,11 @@ public class MainActivity extends Activity implements OnClickListener {
 				public void run() {
 					Bundle parameters = new Bundle();
 					try {
+						Log.i("thread", "new thread first");
 						parameters.putString(Facebook.TOKEN,
 								mFacebook.getAccessToken());
 						UserInform_Facebook = mFacebook.request("me",
 								parameters, "GET");
-						Log.i("response", "첫번째 응답");
 						JSONObject json = Util.parseJson(UserInform_Facebook);
 						// UserInform = json.getString("name") + "\n"
 						// + json.getString("id");
@@ -140,7 +134,6 @@ public class MainActivity extends Activity implements OnClickListener {
 		}
 	}
 
-
 	@Override
 	public void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
@@ -149,11 +142,10 @@ public class MainActivity extends Activity implements OnClickListener {
 	}
 
 	private void login() {
-//		if (!("".equals(mFacebookAccessToken)) && mFacebookAccessToken != null)
-//			mFacebook.setAccessToken(mFacebookAccessToken);
-//		else
-			mFacebook.authorize(this, new String[] { "publish_stream, user_photos, email" }, new AuthorizeListener());
-		
+		mFacebook.authorize(this,
+				new String[] { "publish_stream, user_photos, email" },
+				new mFacebookAuthorizeListener());
+
 		Log.i("login", "authorie complete");
 
 	}
@@ -180,16 +172,24 @@ public class MainActivity extends Activity implements OnClickListener {
 		return returnValue;
 	}
 
+	@Override
+	protected void onDestroy() {
+		// TODO Auto-generated method stub
+		super.onDestroy();
+	}
+
 	// Facebook 인증후 처리를 위한 callback class
-	public class AuthorizeListener implements DialogListener {
+	public class mFacebookAuthorizeListener implements DialogListener {
+
 		@Override
 		public void onCancel() {
+
 		}
 
 		@Override
 		public void onComplete(Bundle values) {
 
-			Log.i("login", "authorizing");
+			Log.i("dialog", "authorize dialoglistener pop");
 			mFacebookAccessToken = mFacebook.getAccessToken();
 			setAppPreferences(MainActivity.this, "ACCESS_TOKEN",
 					mFacebookAccessToken);
@@ -205,13 +205,11 @@ public class MainActivity extends Activity implements OnClickListener {
 					Bundle parameters = new Bundle();
 
 					try {
-						Log.i("response", "response gogo");
+						Log.i("thread", "new thread second");
 						parameters.putString(Facebook.TOKEN,
 								mFacebook.getAccessToken());
 						UserInform_Facebook = mFacebook.request("me",
 								parameters, "GET");
-						Log.i("response", "response완료");
-						Log.i("userinformed", "request me");
 						JSONObject json = Util.parseJson(UserInform_Facebook);
 						// UserInform = json.getString("name") + "\n"
 						// + json.getString("id");
@@ -228,9 +226,10 @@ public class MainActivity extends Activity implements OnClickListener {
 					MainActivity.this.runOnUiThread(new Runnable() {
 
 						public void run() {
-							Log.i("tv2", "facebook textview performed");
+
 							if (flag) {
-								Log.i("스레드", "runonuithread에서 정보 출력");
+								Log.i("runon ui thread",
+										"facebook textview performed");
 								tv.setText(UserInform_Facebook);
 							}
 						}
@@ -239,31 +238,33 @@ public class MainActivity extends Activity implements OnClickListener {
 			}).start();
 
 		}
-		
+
 		@Override
 		public void onError(DialogError e) {
+
 		}
 
 		@Override
 		public void onFacebookError(FacebookError e) {
+
 		}
 	}
-	
-	private WebClientCallBack mCallBack = new WebClientCallBack() {
-		
+
+	private WebClientCallBack mFacebookCallBack = new WebClientCallBack() {
+
 		@Override
 		public void callback(final String userinform) {
 			runOnUiThread(new Runnable() {
 
 				@Override
 				public void run() {
+					Log.i("textview", "google textview performed");
 					webview1.setVisibility(View.INVISIBLE);
-					Log.i("tv1", "google textview performed");
 					tv.setText(userinform);
 
 				}
 			});
-			
+
 		}
 	};
 }
