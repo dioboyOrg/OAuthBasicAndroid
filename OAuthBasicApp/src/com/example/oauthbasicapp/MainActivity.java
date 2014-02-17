@@ -1,166 +1,92 @@
 package com.example.oauthbasicapp;
 
-import java.io.IOException;
-import java.net.MalformedURLException;
-
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.TextView;
 
-import com.example.oauthbasicapp.mGoogleWebClient.WebClientCallBack;
-import com.facebook.android.DialogError;
-import com.facebook.android.Facebook;
-import com.facebook.android.Facebook.DialogListener;
-import com.facebook.android.FacebookError;
-import com.facebook.android.Util;
-import com.google.api.client.googleapis.auth.oauth2.draft10.GoogleAuthorizationRequestUrl;
+import com.example.oauth.OAuthDefines;
+import com.example.oauth.OAuthFacebook;
+import com.example.oauth.OAuthFacebook.OAuthFacebookCallBack;
+import com.example.oauth.OAuthGoogle;
+import com.example.oauth.OAuthGoogle.OAuthGoogleCallBack;
+import com.example.oauth.OAuthUser;
+import com.google.common.base.Strings;
 
-public class MainActivity extends Activity implements OnClickListener {
-	/* facebook Utils */
-	String APP_ID = "708651932501499";
-	String App_Serect = "c4f6f7f05e1c1f6071787e498d41e64c";
-	String Redirect_Uri = "http://www.facebook.com/connect/login_success.html";
-	String FB_URL = "https://graph.facebook.com/oauth/authorize?client_id="
-			+ APP_ID + "&redirect_uri=" + Redirect_Uri
-			+ "&type=user_agent&scope=email,read_stream,offline_access";
+public class MainActivity extends Activity {
+     
+    /** Controls */
+	private TextView mUserInfoTextView;
+	private WebView mGoogleWebView;
+	private Button mGoogleBtn;
+	private Button mFacebookBtn;
+	
+	/** OAuth classes */
+	private OAuthGoogle mGoogleLogin = null; 
+	private OAuthFacebook mFacebookLogin = null;
 
-	String mFacebookAccessToken;
-	@SuppressWarnings("deprecation")
-	Facebook mFacebook = new Facebook(APP_ID);
-
-	/* google Utils */
-	String CLIENT_ID = "31860159396-r2lqrrabsjub8ilgfifvj2a3fqqhph1a.apps.googleusercontent.com";
-	String API_KEY = "AIzaSyDJyn2oOrIwClrCD4kWp15NtzBC9FKw0rE";
-	String CLIENT_SECRET = "";
-	String SCOPE = "https://www.googleapis.com/auth/tasks";
-	String ENDPOINT_URL = "https://www.googleapis.com/tasks/v1/users/@me/lists";
-	String REDIRECT_URI = "http://localhost";
-
-	TextView tv;
-	WebView webview1;
-	Button btn1, btn2;
-	boolean flag = false;
-	String UserInform_Google = null;
-	String UserInform_Facebook = null;
-
-	@SuppressLint("SetJavaScriptEnabled")
-	@SuppressWarnings("deprecation")
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
 		setContentView(R.layout.activity_main);
-		flag = false;
-		btn1 = (Button) findViewById(R.id.button1);
-		btn2 = (Button) findViewById(R.id.button2);
-		webview1 = (WebView) findViewById(R.id.webview1);
-		tv = (TextView) findViewById(R.id.textView2);
-		tv.setMovementMethod(new ScrollingMovementMethod());
-		mFacebookAccessToken = getAppPreferences(MainActivity.this,
-				"ACCESS_TOKEN");
-		mFacebook.setAccessToken(mFacebookAccessToken);
-		btn1.setOnClickListener(this);
-		btn2.setOnClickListener(this);
+		
+		// user info view
+		mUserInfoTextView = (TextView) findViewById(R.id.resultTextview);
+		
+		// initialize Google+
+		mGoogleWebView = (WebView) findViewById(R.id.webview1);
+		mGoogleLogin = new OAuthGoogle(OAuthDefines.GOOGLE_CLIENT_ID, mGoogleWebView, mGoogleLoginCallBack);
+		
+		mGoogleBtn = (Button) findViewById(R.id.googleBtn);
+		mGoogleBtn.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.i("[google]", "google button click");
+                if (mGoogleLogin != null) {
+                    mGoogleLogin.login();
+                }
+            }
+        });
 
-		final WebSettings settings1 = webview1.getSettings();
-		settings1.setDefaultTextEncodingName("utf-8");
-		settings1.setJavaScriptEnabled(true);
-		settings1.setJavaScriptCanOpenWindowsAutomatically(false);
-		settings1.setRenderPriority(WebSettings.RenderPriority.HIGH);
-
-		webview1.setWebViewClient(new mGoogleWebClient(mFacebookCallBack,
-				CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, ENDPOINT_URL,
-				UserInform_Google, webview1, tv));
-	}
-
-	@Override
-	public void onClick(View v) {
-		switch (v.getId()) {
-		// Google Oauth 2.0 Example
-		case R.id.button1:
-			Log.i("button", "google button1 click");
-			String oauthUrl = new GoogleAuthorizationRequestUrl(CLIENT_ID,
-					REDIRECT_URI, SCOPE).build();
-			webview1.loadUrl(oauthUrl);
-			break;
-		// Facebook Oauth 2.0 Example
-		case R.id.button2:
-
-			Log.i("button", "facebook button2 click");
-
-			login();
-
-			new Thread(new Runnable() {
-				@Override
-				public void run() {
-					Bundle parameters = new Bundle();
-					try {
-						Log.i("thread", "new thread first");
-						parameters.putString(Facebook.TOKEN,
-								mFacebook.getAccessToken());
-						UserInform_Facebook = mFacebook.request("me",
-								parameters, "GET");
-						JSONObject json = Util.parseJson(UserInform_Facebook);
-						// UserInform = json.getString("name") + "\n"
-						// + json.getString("id");
-					} catch (FacebookError e) {
-						e.printStackTrace();
-					} catch (MalformedURLException e) {
-						e.printStackTrace();
-					} catch (IOException e) {
-						e.printStackTrace();
-					} catch (JSONException e) {
-						e.printStackTrace();
-					}
-				}
-			}).start();
-
-			break;
-		default:
-			break;
+		// initialize Facebook
+        mFacebookBtn = (Button) findViewById(R.id.facebookBtn);
+		
+		mFacebookLogin = new OAuthFacebook(OAuthDefines.FACEBOOK_APP_ID, this, mFacebookCallback);
+		String token = getAppPreferences(this, OAuthFacebook.PREF_KEY);
+		if(!Strings.isNullOrEmpty(token)) {
+		    mFacebookLogin.setAccessToken(token);
 		}
+		
+		mFacebookBtn.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.i("[facebook]", "facebook button click");
+                mFacebookLogin.login();
+            }
+		});
 	}
 
 	@Override
 	public void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
-
-		mFacebook.authorizeCallback(requestCode, resultCode, data);
+        if (mFacebookLogin != null) {
+            mFacebookLogin.onActivityResult(requestCode, resultCode, data);
+        }
 	}
 
-	private void login() {
-		mFacebook.authorize(this,
-				new String[] { "publish_stream, user_photos, email" },
-				new mFacebookAuthorizeListener());
-
-		Log.i("login", "authorie complete");
-
-	}
-
-	// app 쉐어드 프레퍼런스에 값 저장
-	private void setAppPreferences(Activity context, String key, String value) {
-		SharedPreferences pref = null;
-		pref = context.getSharedPreferences("MainActivity", 0);
-		SharedPreferences.Editor prefEditor = pref.edit();
-		prefEditor.putString(key, value);
-
-		prefEditor.commit();
-	}
-
-	// app 쉐어드 프레퍼런스에서 값을 읽어옴
+	/**
+	 *  app 쉐어드 프레퍼런스에서 값을 읽어옴
+	 * @param context Activity context
+	 * @param key preference key
+	 * @return preferecne value
+	 */
 	private String getAppPreferences(Activity context, String key) {
 		String returnValue = null;
 
@@ -172,99 +98,49 @@ public class MainActivity extends Activity implements OnClickListener {
 		return returnValue;
 	}
 
-	@Override
-	protected void onDestroy() {
-		// TODO Auto-generated method stub
-		super.onDestroy();
-	}
-
-	// Facebook 인증후 처리를 위한 callback class
-	public class mFacebookAuthorizeListener implements DialogListener {
+	private OAuthGoogleCallBack mGoogleLoginCallBack = new OAuthGoogleCallBack() {
 
 		@Override
-		public void onCancel() {
-
-		}
-
-		@Override
-		public void onComplete(Bundle values) {
-
-			Log.i("dialog", "authorize dialoglistener pop");
-			mFacebookAccessToken = mFacebook.getAccessToken();
-			setAppPreferences(MainActivity.this, "ACCESS_TOKEN",
-					mFacebookAccessToken);
-
-			flag = true;
-			Log.i("flag", "flag set true");
-
-			new Thread(new Runnable() {
-
-				@Override
-				public void run() {
-
-					Bundle parameters = new Bundle();
-
-					try {
-						Log.i("thread", "new thread second");
-						parameters.putString(Facebook.TOKEN,
-								mFacebook.getAccessToken());
-						UserInform_Facebook = mFacebook.request("me",
-								parameters, "GET");
-						JSONObject json = Util.parseJson(UserInform_Facebook);
-						// UserInform = json.getString("name") + "\n"
-						// + json.getString("id");
-					} catch (FacebookError e) {
-						e.printStackTrace();
-					} catch (MalformedURLException e) {
-						e.printStackTrace();
-					} catch (IOException e) {
-						e.printStackTrace();
-					} catch (JSONException e) {
-						e.printStackTrace();
-					}
-
-					MainActivity.this.runOnUiThread(new Runnable() {
-
-						public void run() {
-
-							if (flag) {
-								Log.i("runon ui thread",
-										"facebook textview performed");
-								tv.setText(UserInform_Facebook);
-							}
-						}
-					});
-				}
-			}).start();
-
-		}
-
-		@Override
-		public void onError(DialogError e) {
-
-		}
-
-		@Override
-		public void onFacebookError(FacebookError e) {
-
-		}
-	}
-
-	private WebClientCallBack mFacebookCallBack = new WebClientCallBack() {
-
-		@Override
-		public void callback(final String userinform) {
+		public void onComplete(final OAuthUser userinform) {
+            if (userinform == null) {
+                return;
+            }
 			runOnUiThread(new Runnable() {
 
 				@Override
 				public void run() {
-					Log.i("textview", "google textview performed");
-					webview1.setVisibility(View.INVISIBLE);
-					tv.setText(userinform);
-
+				    Log.i("[google]", "google textview performed");
+			        mUserInfoTextView.setText(userinform.toString());
 				}
 			});
-
 		}
+	};
+	
+	private OAuthFacebookCallBack mFacebookCallback = new OAuthFacebookCallBack() {
+
+        @Override
+        public void saveToken(String key, String token) {
+            SharedPreferences pref = null;
+            pref = MainActivity.this.getSharedPreferences("MainActivity", 0);
+            SharedPreferences.Editor prefEditor = pref.edit();
+            prefEditor.putString(key, token);
+
+            prefEditor.commit();
+        }
+
+        @Override
+        public void onComplete(final OAuthUser userinform) {
+            if (userinform == null) {
+                return;
+            }
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if(userinform != null) {
+                        mUserInfoTextView.setText(userinform.toString());
+                    }
+                }
+            });
+        }
 	};
 }

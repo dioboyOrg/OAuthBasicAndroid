@@ -8,39 +8,37 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context=".GoogleOAuthMain" >
 
-    <TextView
-        android:id="@+id/textView1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/hello_world" />
-
-    <TextView
-        android:id="@+id/textView2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/button2"
-        android:layout_centerHorizontal="true"
-        android:layout_centerVertical="true"
-        android:textSize="20sp" />
-
     <Button
-        android:id="@+id/button1"
-        android:layout_width="wrap_content"
+        android:id="@+id/googleBtn"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/textView1"
-        android:text="Google" />
-
+        android:background="#CC3634"
+        android:text="Google+ Login"
+        android:textColor="#ffffff" />
+    
     <Button
-        android:id="@+id/button2"
-        android:layout_width="wrap_content"
+        android:id="@+id/facebookBtn"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/button1"
-        android:text="Facebook" />
-
+        android:layout_below="@+id/googleBtn"
+        android:layout_marginTop="5dp"
+        android:background="#3B5998"
+        android:text="Facebook Login"
+        android:textColor="#ffffff" />
+    
     <WebView
         android:id="@+id/webview1"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="invisible" />
+    
+    <TextView
+        android:id="@+id/resultTextview"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/facebookBtn"
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true"
+        android:textSize="20sp" />
 
 </RelativeLayout>
