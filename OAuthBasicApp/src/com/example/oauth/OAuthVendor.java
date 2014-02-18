@@ -2,8 +2,8 @@ package com.example.oauth;
 
 /**
  * OAuthType
+ * 
  * @author jykim
- *
  */
 public enum OAuthVendor {
     /**

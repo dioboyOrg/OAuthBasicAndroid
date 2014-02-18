@@ -18,7 +18,7 @@ import android.util.Log;
 import java.io.IOException;
 import java.net.MalformedURLException;
 
-public class OAuthFacebook {
+public class OAuthFacebook implements OAuthUser.Convertable {
     
     public interface OAuthFacebookCallBack {
         public void saveToken(String key, String token);
@@ -26,6 +26,9 @@ public class OAuthFacebook {
     }
     
     public final static String PREF_KEY = "ACCESS_TOKEN";
+    
+    private final String FB_JSON_ID_KEY = "id";
+    private final String FB_JSON_NAME_KEY = "name";
     
 //    private final String App_Serect = "c4f6f7f05e1c1f6071787e498d41e64c";
 //    private final String Redirect_Uri = "http://www.facebook.com/connect/login_success.html";
@@ -100,7 +103,7 @@ public class OAuthFacebook {
                         parameters.putString(Facebook.TOKEN, mFacebook.getAccessToken());
                         String userInfo = mFacebook.request("me", parameters, "GET");
                        
-                        OAuthUser oUser = parseResult(userInfo);
+                        OAuthUser oUser = convertUser(userInfo);
 
                         if (mCallback != null) {
                             mCallback.onComplete(oUser);
@@ -113,21 +116,6 @@ public class OAuthFacebook {
                 }
             }).start();
         }
-        
-        private OAuthUser parseResult(String jsonString) {
-            if (!Strings.isNullOrEmpty(jsonString)) {
-                try {
-                    JSONObject json = Util.parseJson(jsonString);
-                    return new OAuthUser(json.getString("id"),
-                            json.getString("name"), OAuthVendor.FACEBOOK);
-                } catch (FacebookError e) {
-                    e.printStackTrace();
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-            return null;
-        }
 
         @Override
         public void onFacebookError(FacebookError e) {
@@ -136,5 +124,23 @@ public class OAuthFacebook {
         @Override
         public void onError(DialogError e) {
         }
+    }
+
+    @Override
+    public OAuthUser convertUser(String jsonString) {
+        if (!Strings.isNullOrEmpty(jsonString)) {
+            try {
+                JSONObject json = Util.parseJson(jsonString);
+                if (json != null) {
+                    return new OAuthUser(json.getString(FB_JSON_ID_KEY),
+                            json.getString(FB_JSON_NAME_KEY), OAuthVendor.FACEBOOK);
+                }
+            } catch (FacebookError e) {
+                e.printStackTrace();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
     }
 }

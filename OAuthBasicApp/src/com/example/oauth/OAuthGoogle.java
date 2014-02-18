@@ -24,7 +24,7 @@ import android.webkit.WebViewClient;
 
 import java.io.IOException;
 
-public class OAuthGoogle {
+public class OAuthGoogle implements OAuthUser.Convertable {
     
     public interface OAuthGoogleCallBack {
         public void onComplete(OAuthUser user);
@@ -36,6 +36,8 @@ public class OAuthGoogle {
     private final String ENDPOINT_URL = "https://www.googleapis.com/tasks/v1/users/@me/lists";
     private final String REDIRECT_URI = "http://localhost";
     private final String CLIENT_SECRET = "";
+    
+    private final String GOOGLE_JSON_ID_KEY = "id";
     
     private WebView mWebView = null;
     private OAuthGoogleCallBack mCallback = null;
@@ -76,31 +78,13 @@ public class OAuthGoogle {
                 mWebView.setVisibility(View.VISIBLE);
             }
         }
-        
-        private OAuthUser parseResult(String jsonString) {
-            if (!Strings.isNullOrEmpty(jsonString)) {
-                try {
-                    JSONObject json = new JSONObject(jsonString);
-                    String items = json.getString("items");
-                    if (!Strings.isNullOrEmpty(items)) {
-                        json = new JSONObject(items.substring(1, items.length()-1));
-                        return new OAuthUser(json.getString("id"),
-                                "name", OAuthVendor.GOOGLE);
-                    }
-                    Log.i("[google]", json.toString());
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-            return null;
-        }
 
         @Override
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);
             if (mWebView != null && url != null && url.length() > 0) {
                 final String pageUrl = url;
-                Log.i("[google]", "webview geturl() complete : " + url);
+                Log.i("[google]", "webview geturl() complete : " + pageUrl);
 
                 if (pageUrl != null && pageUrl.startsWith(REDIRECT_URI)) {
                     mWebView.setVisibility(View.GONE);
@@ -132,7 +116,7 @@ public class OAuthGoogle {
                                     final com.google.api.client.http.HttpResponse response = request
                                             .execute();
                                     String authResultString = response.parseAsString();
-                                    OAuthUser user = parseResult(authResultString);
+                                    OAuthUser user = convertUser(authResultString);
                                     if (mCallback != null) {
                                         mCallback.onComplete(user);
                                     }
@@ -149,4 +133,26 @@ public class OAuthGoogle {
             }
         }
     };
+
+
+    @Override
+    public OAuthUser convertUser(String jsonString) {
+        if (!Strings.isNullOrEmpty(jsonString)) {
+            try {
+                JSONObject json = new JSONObject(jsonString);
+                String items = json.getString("items");
+                if (!Strings.isNullOrEmpty(items)) {
+                    json = new JSONObject(items.substring(1, items.length()-1));
+                    if (json != null) {
+                        return new OAuthUser(json.getString(GOOGLE_JSON_ID_KEY),
+                                "name", OAuthVendor.GOOGLE);
+
+                    }
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
 }

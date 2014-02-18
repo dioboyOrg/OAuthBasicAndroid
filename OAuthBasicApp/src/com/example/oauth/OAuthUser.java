@@ -3,7 +3,22 @@ package com.example.oauth;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+/**
+ * OAuth로 인증받은 User 객체
+ * 
+ * @author jykim
+ */
 public class OAuthUser implements Parcelable {
+    
+    /**
+     * Json string 을 OAuthUser 객체로 변환하는 API
+     * 
+     * @author jykim
+     */
+    public interface Convertable {
+        public abstract OAuthUser convertUser(String jsonString);
+    }
+    
     /**
      * serialVersionUID
      */
